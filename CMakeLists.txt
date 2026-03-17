@@ -14,6 +14,7 @@ find_package(Qt5 REQUIRED COMPONENTS
   Core
   Gui
   Widgets
+  Network
   3DCore
   3DRender
   3DExtras
@@ -27,6 +28,7 @@ add_executable(${PROJECT_NAME}
   customlineentity.cpp
   main.cpp
   mainwindow.cpp
+  mapentity.cpp
   targetentity.cpp
   view3d.cpp
 
@@ -34,6 +36,7 @@ add_executable(${PROJECT_NAME}
   coordinateconverter.h
   customlineentity.h
   mainwindow.h
+  mapentity.h
   targetentity.h
   view3d.h
 
@@ -46,6 +49,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   Qt5::Core
   Qt5::Gui
   Qt5::Widgets
+  Qt5::Network
   Qt5::3DCore
   Qt5::3DRender
   Qt5::3DExtras

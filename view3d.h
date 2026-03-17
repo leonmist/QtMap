@@ -12,6 +12,7 @@
 
 #include "CustomLineEntity.h"
 #include "TargetEntity.h"
+#include "MapEntity.h"
 
 // 目标数据，包含目标实体和轨迹线
 struct TargetData {
@@ -40,11 +41,14 @@ public:
     // 清理所有目标
     void clearAllTargets();
 
+    MapEntity* mapEntity() const { return m_mapEntity; }
+
 public slots:
     void toggleGrid();
     void setTarget(int id, const QVector3D &position);
     void setTargetVisible(int id, bool visible);
     void setAllTargetsVisible(bool visible);
+    void loadMap(double lat, double lon, int zoom = 14);
 
 signals:
     void cameraChanged(const QString &info);
@@ -81,6 +85,8 @@ private:
     // 目标管理
     QMap<int, TargetData> m_targets;  // 按ID存储目标数据
     int m_maxTargetId;                // 最大目标ID（用于颜色分配）
+
+    MapEntity *m_mapEntity;           // 地图瓦片实体
 
     void refreshRootEntity(); // 强制刷新根实体渲染上下文
     Qt3DRender::QRenderAspect* getRenderAspect(); // 获取渲染切面

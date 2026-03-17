@@ -30,20 +30,23 @@ signals:
     void resetCameraRequested();
     void toggleGridRequested();
     void targetChanged(int id, const QVector3D &position);  // 发送编号和位置
-    void targetVisibilityChanged(bool visible);  // 所有目标可见性
+    void targetVisibilityChanged(bool visible);              // 所有目标可见性
+    void loadMapRequested(double lat, double lon, int zoom); // 请求加载地图
 
 public slots:
     void setInfo(const QString &text);
     void setCameraPosition(const QString &position);
-    void setTarget(int id, const QVector3D &position);  // 修改：合并槽函数
+    void setTarget(int id, const QVector3D &position);
+    void setMapLoadProgress(int done, int total);        // 更新地图加载进度
 
 private slots:
     void onTargetInputChanged();
     void onSetTargetClicked();
     void onClearTargetClicked();
-    void onStartSimulationClicked();     // 新增：开始模拟
-    void onStopSimulationClicked();      // 新增：停止模拟
-    void onSimulationTimeout();          // 新增：模拟定时器超时
+    void onStartSimulationClicked();
+    void onStopSimulationClicked();
+    void onSimulationTimeout();
+    void onLoadMapClicked();             // 加载地图按钮
 
 private:
     void setupUI();
@@ -74,12 +77,19 @@ private:
     QPushButton *m_stopSimBtn;           // 新增：停止模拟按钮
 
     // UI控件 - 模拟参数
-    QDoubleSpinBox *m_simRadiusSpinBox;  // 新增：模拟半径
-    QSpinBox *m_simSpeedSpinBox;         // 新增：模拟速度
+    QDoubleSpinBox *m_simRadiusSpinBox;
+    QSpinBox *m_simSpeedSpinBox;
+
+    // UI控件 - 地图加载
+    QDoubleSpinBox *m_latSpinBox;
+    QDoubleSpinBox *m_lonSpinBox;
+    QSpinBox       *m_zoomSpinBox;
+    QPushButton    *m_loadMapBtn;
+    QLabel         *m_mapProgressLabel;
 
     bool m_targetVisible;
-    QTimer *m_simulationTimer;           // 新增：模拟定时器
-    int m_simulationCounter;             // 新增：模拟计数器
+    QTimer *m_simulationTimer;
+    int m_simulationCounter;
 };
 
 #endif // CONTROLPANEL_H

@@ -167,6 +167,48 @@ void ControlPanel::setupUI()
     simulationGroup->setLayout(simulationLayout);
     mainLayout->addWidget(simulationGroup);
 
+    // ==== 地图加载 ====
+    QGroupBox *mapGroup = new QGroupBox("高德地图加载");
+    QVBoxLayout *mapLayout = new QVBoxLayout();
+
+    QFormLayout *mapFormLayout = new QFormLayout();
+
+    m_latSpinBox = new QDoubleSpinBox();
+    m_latSpinBox->setRange(-90.0, 90.0);
+    m_latSpinBox->setValue(31.2304);   // 默认上海
+    m_latSpinBox->setDecimals(6);
+    m_latSpinBox->setSingleStep(0.01);
+    m_latSpinBox->setSuffix(" °N");
+    mapFormLayout->addRow("中心纬度:", m_latSpinBox);
+
+    m_lonSpinBox = new QDoubleSpinBox();
+    m_lonSpinBox->setRange(-180.0, 180.0);
+    m_lonSpinBox->setValue(121.4737);  // 默认上海
+    m_lonSpinBox->setDecimals(6);
+    m_lonSpinBox->setSingleStep(0.01);
+    m_lonSpinBox->setSuffix(" °E");
+    mapFormLayout->addRow("中心经度:", m_lonSpinBox);
+
+    m_zoomSpinBox = new QSpinBox();
+    m_zoomSpinBox->setRange(8, 18);
+    m_zoomSpinBox->setValue(14);
+    mapFormLayout->addRow("缩放级别:", m_zoomSpinBox);
+
+    mapLayout->addLayout(mapFormLayout);
+
+    m_loadMapBtn = new QPushButton("加载地图");
+    mapLayout->addWidget(m_loadMapBtn);
+
+    m_mapProgressLabel = new QLabel("未加载");
+    m_mapProgressLabel->setAlignment(Qt::AlignCenter);
+    m_mapProgressLabel->setStyleSheet("QLabel { color: gray; }");
+    mapLayout->addWidget(m_mapProgressLabel);
+
+    mapGroup->setLayout(mapLayout);
+    mainLayout->addWidget(mapGroup);
+
+    connect(m_loadMapBtn, &QPushButton::clicked, this, &ControlPanel::onLoadMapClicked);
+
     // ==== 相机控制 ====
     QGroupBox *cameraGroup = new QGroupBox("相机控制");
     QVBoxLayout *cameraLayout = new QVBoxLayout();
@@ -403,4 +445,32 @@ void ControlPanel::onClearTargetClicked()
     emit targetVisibilityChanged(false);
 
     qDebug() << "清除目标位置，编号保持:" << getTargetId();
+}
+
+void ControlPanel::onLoadMapClicked()
+{
+    double lat  = m_latSpinBox->value();
+    double lon  = m_lonSpinBox->value();
+    int    zoom = m_zoomSpinBox->value();
+
+    m_loadMapBtn->setEnabled(false);
+    m_mapProgressLabel->setText("加载中 0/49...");
+    m_mapProgressLabel->setStyleSheet("QLabel { color: orange; }");
+
+    qDebug() << "ControlPanel: 请求加载地图 lat=" << lat
+             << " lon=" << lon << " zoom=" << zoom;
+
+    emit loadMapRequested(lat, lon, zoom);
+}
+
+void ControlPanel::setMapLoadProgress(int done, int total)
+{
+    if (done < total) {
+        m_mapProgressLabel->setText(QString("加载中 %1/%2...").arg(done).arg(total));
+        m_mapProgressLabel->setStyleSheet("QLabel { color: orange; }");
+    } else {
+        m_mapProgressLabel->setText(QString("加载完成 %1 片").arg(total));
+        m_mapProgressLabel->setStyleSheet("QLabel { color: green; }");
+        m_loadMapBtn->setEnabled(true);
+    }
 }

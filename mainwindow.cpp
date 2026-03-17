@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "MapEntity.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QApplication>
@@ -37,12 +38,19 @@ void MainWindow::setupUI()
     connect(m_view3D, &View3D::cameraChanged, this, &MainWindow::updateCameraInfo);
 
     // 连接目标相关信号
-    // 连接目标相关信号
-    // 连接目标相关信号
     connect(m_controlPanel, &ControlPanel::targetChanged,
-            m_view3D, &View3D::setTarget,Qt::QueuedConnection);
+            m_view3D, &View3D::setTarget, Qt::QueuedConnection);
     connect(m_controlPanel, &ControlPanel::targetVisibilityChanged,
-            m_view3D, &View3D::setAllTargetsVisible,Qt::QueuedConnection);
+            m_view3D, &View3D::setAllTargetsVisible, Qt::QueuedConnection);
+
+    // 连接地图加载信号
+    connect(m_controlPanel, &ControlPanel::loadMapRequested,
+            this, &MainWindow::handleLoadMap);
+    if (m_view3D->mapEntity()) {
+        connect(m_view3D->mapEntity(), &MapEntity::loadProgress,
+                m_controlPanel, &ControlPanel::setMapLoadProgress,
+                Qt::QueuedConnection);
+    }
     // 初始信息
     m_controlPanel->setInfo("X轴: 东方向 (红色)\nY轴: 高度 (绿色)\nZ轴: 北方向 (蓝色)");
 
@@ -66,4 +74,9 @@ void MainWindow::handleToggleGrid()
 void MainWindow::updateCameraInfo(const QString &info)
 {
     m_controlPanel->setCameraPosition(info);
+}
+
+void MainWindow::handleLoadMap(double lat, double lon, int zoom)
+{
+    m_view3D->loadMap(lat, lon, zoom);
 }

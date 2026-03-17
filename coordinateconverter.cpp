@@ -1,18 +1,34 @@
 #include "CoordinateConverter.h"
 #include <QDebug>
 
+// 默认值对应原始 DISBASE=1000, HGTBASE=100
+double CoordinateConverter::s_sceneUnitsPerMeter       = 1.0 / DISBASE;
+double CoordinateConverter::s_sceneUnitsPerMeterHeight = 1.0 / HGTBASE;
+
 CoordinateConverter::CoordinateConverter(QObject *parent) : QObject(parent)
 {
 }
 
+void CoordinateConverter::setSceneUnitsPerMeter(double s)
+{
+    if (s <= 0.0) {
+        qWarning() << "CoordinateConverter: 无效的缩放比" << s << "，保持原值";
+        return;
+    }
+    s_sceneUnitsPerMeter = s;
+    // 高度方向按原比例关系等比放大（原来高度是水平的 DISBASE/HGTBASE = 10 倍夸大）
+    s_sceneUnitsPerMeterHeight = s * (static_cast<double>(DISBASE) / HGTBASE);
+    qDebug() << "CoordinateConverter: 新缩放比 sceneUnitsPerMeter =" << s
+             << " sceneUnitsPerMeterHeight =" << s_sceneUnitsPerMeterHeight;
+}
+
+double CoordinateConverter::sceneUnitsPerMeter()
+{
+    return s_sceneUnitsPerMeter;
+}
+
 QVector3D CoordinateConverter::distanceAzimuthHeightToCartesian(double distance, double azimuth, double height)
 {
-    // 计算俯仰角（仰角/俯角）
-    double elevation = 0.0;
-    if (distance > 0.001) {  // 避免除以零
-        elevation = asin(height / distance);
-    }
-
     // 计算水平距离
     double horizontalDistance = calculateHorizontalDistance(distance, height);
 
@@ -20,15 +36,14 @@ QVector3D CoordinateConverter::distanceAzimuthHeightToCartesian(double distance,
     double azimuthRad = degreesToRadians(azimuth);
 
     // 在XZ平面上计算位置（X指向东，Z指向北）
-    // 先计算水平分量
     double x = -horizontalDistance * cos(azimuthRad);  // 东方向
     double z = -horizontalDistance * sin(azimuthRad);  // 北方向
-    double y = height;  // 高度（Y轴向上）
+    double y = height;                                  // 高度（Y轴向上）
 
-    // 应用缩放
-    x = x / DISBASE;
-    z = z / DISBASE;
-    y = y / HGTBASE;
+    // 应用动态缩放（地图加载前使用 1/DISBASE，加载后使用瓦片像素分辨率推导的比例）
+    x = x * s_sceneUnitsPerMeter;
+    z = z * s_sceneUnitsPerMeter;
+    y = y * s_sceneUnitsPerMeterHeight;
 
     return QVector3D(x, y, z);
 }
@@ -39,9 +54,9 @@ void CoordinateConverter::cartesianToDistanceAzimuthHeight(const QVector3D &poin
                                                           double &height)
 {
     // 将显示坐标转换为实际坐标（反缩放）
-    double realX = point.x() * DISBASE;
-    double realZ = point.z() * DISBASE;
-    double realY = point.y() * HGTBASE;
+    double realX = (s_sceneUnitsPerMeter > 0) ? point.x() / s_sceneUnitsPerMeter : point.x() * DISBASE;
+    double realZ = (s_sceneUnitsPerMeter > 0) ? point.z() / s_sceneUnitsPerMeter : point.z() * DISBASE;
+    double realY = (s_sceneUnitsPerMeterHeight > 0) ? point.y() / s_sceneUnitsPerMeterHeight : point.y() * HGTBASE;
 
     // 计算斜距（使用实际坐标）
     distance = sqrt(realX * realX + realZ * realZ + realY * realY);

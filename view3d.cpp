@@ -1,4 +1,5 @@
 #include "View3D.h"
+#include "CoordinateConverter.h"
 #include <QVBoxLayout>
 #include <QDebug>
 #include <QSurfaceFormat>
@@ -81,7 +82,8 @@ void View3D::refreshRootEntity()
 View3D::View3D(QWidget *parent) :
     QWidget(parent),
     m_gridVisible(true),
-    m_maxTargetId(0)
+    m_maxTargetId(0),
+    m_mapEntity(nullptr)
 {
     setupUI();
     setupScene();
@@ -154,6 +156,10 @@ void View3D::setupScene()
 
     // 光照设置
     setupLighting();
+
+    // 地图实体（不立即加载，等待用户输入经纬度）
+    m_mapEntity = new MapEntity(m_rootEntity);
+
     updateCameraInfo();
 
     qDebug() << "3D场景初始化完成，支持多目标跟踪";
@@ -481,6 +487,23 @@ void View3D::clearAllTargets()
 void View3D::updateCameraInfo()
 {
     emit cameraChanged(getCameraInfo());
+}
+
+void View3D::loadMap(double lat, double lon, int zoom)
+{
+    if (!m_mapEntity) {
+        qWarning() << "View3D::loadMap: mapEntity 未初始化";
+        return;
+    }
+
+    // 地图加载完成后更新 CoordinateConverter 缩放比
+    connect(m_mapEntity, &MapEntity::mapLoaded, this, [this](double scale) {
+        CoordinateConverter::setSceneUnitsPerMeter(scale);
+        qDebug() << "View3D: 地图加载完成，CoordinateConverter 缩放比已更新为" << scale;
+    }, Qt::UniqueConnection);
+
+    m_mapEntity->loadMap(lat, lon, zoom);
+    qDebug() << "View3D::loadMap 已触发 lat=" << lat << " lon=" << lon << " zoom=" << zoom;
 }
 
 

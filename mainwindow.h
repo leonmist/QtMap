@@ -16,6 +16,7 @@ private slots:
     void handleResetCamera();
     void handleToggleGrid();
     void updateCameraInfo(const QString &info);
+    void handleLoadMap(double lat, double lon, int zoom);
 
 private:
     void setupUI();
