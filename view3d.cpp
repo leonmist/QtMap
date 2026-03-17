@@ -312,6 +312,7 @@ void View3D::createNewTarget(int id, const QVector3D &position)
     TargetEntity* target = new TargetEntity(m_rootEntity);
     target->setId(id);
     target->setPosition(position);
+    target->setHeading(QVector3D(1, 0, 0));  // 默认航向 X+，高度针在球后与航线重合
     target->setVisible(true);
 
     initialPath = {position};
@@ -346,9 +347,17 @@ void View3D::updateExistingTarget(int id, const QVector3D &position)
         data.line->setPoints(data.path);
     }
 
-    // 更新目标位置
+    // 更新目标位置与航向（航向由最后两点计算，高度针在 XZ 平面、球后、与航线重合）
     if (data.target) {
         data.target->setPosition(position);
+        if (data.path.size() >= 2) {
+            QVector3D from = data.path[data.path.size() - 2];
+            QVector3D to = data.path[data.path.size() - 1];
+            QVector3D dir = to - from;
+            if (dir.lengthSquared() > 1e-10f) {
+                data.target->setHeading(dir.normalized());
+            }
+        }
     }
 
     qDebug() << "更新目标" << id << "位置:" << position
