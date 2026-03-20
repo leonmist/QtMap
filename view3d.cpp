@@ -140,7 +140,7 @@ void View3D::setupScene()
 
     // 相机设置...
     m_camera = m_view->camera();
-    m_camera->setPosition(QVector3D(12, 8, 10));
+    m_camera->setPosition(QVector3D(-2, 6, -15));
     m_camera->setViewCenter(QVector3D(0, 0, 0));
     m_camera->setUpVector(QVector3D(0, 1, 0));
     m_camera->lens()->setPerspectiveProjection(60.0f, 16.0f/9.0f, 0.1f, 200.0f);

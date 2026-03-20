@@ -36,8 +36,8 @@ QVector3D CoordinateConverter::distanceAzimuthHeightToCartesian(double distance,
     double azimuthRad = degreesToRadians(azimuth);
 
     // 在XZ平面上计算位置（X指向东，Z指向北）
-    double x = -horizontalDistance * cos(azimuthRad);  // 东方向
-    double z = -horizontalDistance * sin(azimuthRad);  // 北方向
+    double x = -horizontalDistance * sin(azimuthRad);  // 东方向
+    double z = horizontalDistance * cos(azimuthRad);  // 北方向
     double y = height;                                  // 高度（Y轴向上）
 
     // 应用动态缩放（地图加载前使用 1/DISBASE，加载后使用瓦片像素分辨率推导的比例）

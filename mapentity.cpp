@@ -239,6 +239,10 @@ void MapEntity::assembleAndApply()
             if (m_tileImages.contains(key)) {
                 painter.drawImage(col * 256, row * 256, m_tileImages[key]);
             }
+            // 每张瓦片叠加红色边框便于辨识
+            painter.setPen(QPen(Qt::red, 2));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawRect(col * 256, row * 256, 255, 255);
         }
     }
     painter.end();
