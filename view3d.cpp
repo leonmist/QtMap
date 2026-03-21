@@ -207,23 +207,23 @@ void View3D::createCoordinateSystem()
     }
 
     //创建一个水平圆环（XZ平面）
-    for(int i=0;i<10;i++){
-        QVector3D center1(0, 0, 0);  // 中心点
-        float radius1 = i;        // 半径
-        int segments1 = 120;          // 分段数
-        QVector3D normal1(0, 1, 0);  // 法向量向上
+    // for(int i=0;i<10;i++){
+    //     QVector3D center1(0, 0, 0);  // 中心点
+    //     float radius1 = i;        // 半径
+    //     int segments1 = 120;          // 分段数
+    //     QVector3D normal1(0, 1, 0);  // 法向量向上
 
-        QVector<QVector3D> circlePoints1 = generateCirclePoints(center1, radius1, segments1, normal1);
+    //     QVector<QVector3D> circlePoints1 = generateCirclePoints(center1, radius1, segments1, normal1);
 
-        // 创建水平圆环实体
-        CustomLineEntity* horizontalCircle = new CustomLineEntity(
-            3001,  // 唯一ID
-            circlePoints1,
-            QColor(100, 180, 10),  // 红色
-            1.0f,               // 线宽
-            m_rootEntity
-        );
-    }
+    //     // 创建水平圆环实体
+    //     CustomLineEntity* horizontalCircle = new CustomLineEntity(
+    //         3001,  // 唯一ID
+    //         circlePoints1,
+    //         QColor(100, 180, 10),  // 红色
+    //         1.0f,               // 线宽
+    //         m_rootEntity
+    //     );
+    // }
 
 
 }

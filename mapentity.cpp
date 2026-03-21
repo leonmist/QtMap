@@ -229,6 +229,16 @@ void MapEntity::assembleAndApply()
     int side       = 2 * m_tileRadius + 1;
     int totalPix   = side * 256;
 
+    // 计算中心点在中心瓦片内的小数偏移，整体平移绘制使真实中心点对齐 mosaic 中心像素
+    QPointF cf    = latLonToTileF(m_centerLat, m_centerLon, m_zoom);
+    double frac_x = cf.x() - std::floor(cf.x());
+    double frac_y = cf.y() - std::floor(cf.y());
+    int dx_shift  = static_cast<int>(std::round(128.0 - frac_x * 256.0));
+    int dy_shift  = static_cast<int>(std::round(128.0 - frac_y * 256.0));
+
+    qDebug() << "MapEntity: 中心点对齐 frac=(" << frac_x << "," << frac_y << ")"
+             << " shift=(" << dx_shift << "," << dy_shift << ")px";
+
     QImage mosaic(totalPix, totalPix, QImage::Format_RGBA8888);
     mosaic.fill(Qt::black);
 
@@ -237,12 +247,12 @@ void MapEntity::assembleAndApply()
         for (int col = 0; col < side; col++) {
             auto key = qMakePair(col, row);
             if (m_tileImages.contains(key)) {
-                painter.drawImage(col * 256, row * 256, m_tileImages[key]);
+                painter.drawImage(col * 256 + dx_shift, row * 256 + dy_shift, m_tileImages[key]);
             }
             // 每张瓦片叠加红色边框便于辨识
             painter.setPen(QPen(Qt::red, 2));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRect(col * 256, row * 256, 255, 255);
+            painter.drawRect(col * 256 + dx_shift, row * 256 + dy_shift, 255, 255);
         }
     }
     painter.end();
