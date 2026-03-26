@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
   main.cpp
   mainwindow.cpp
   mapentity.cpp
+  skydomeentity.cpp
   targetentity.cpp
   view3d.cpp
 
@@ -37,6 +38,7 @@ add_executable(${PROJECT_NAME}
   customlineentity.h
   mainwindow.h
   mapentity.h
+  skydomeentity.h
   targetentity.h
   view3d.h
 

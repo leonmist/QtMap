@@ -72,7 +72,7 @@ void ControlPanel::setupUI()
 
     // 距离输入
     m_distanceSpinBox = new QDoubleSpinBox();
-    m_distanceSpinBox->setRange(0, 10000);
+    m_distanceSpinBox->setRange(0, 100000);
     m_distanceSpinBox->setValue(100);
     m_distanceSpinBox->setSingleStep(10);
     m_distanceSpinBox->setSuffix(" m");
@@ -139,7 +139,7 @@ void ControlPanel::setupUI()
     QFormLayout *simParamLayout = new QFormLayout();
 
     m_simRadiusSpinBox = new QDoubleSpinBox();
-    m_simRadiusSpinBox->setRange(100, 5000);
+    m_simRadiusSpinBox->setRange(100, 500000);
     m_simRadiusSpinBox->setValue(2000);
     m_simRadiusSpinBox->setSingleStep(100);
     m_simRadiusSpinBox->setSuffix(" m");
@@ -191,7 +191,7 @@ void ControlPanel::setupUI()
 
     m_zoomSpinBox = new QSpinBox();
     m_zoomSpinBox->setRange(8, 18);
-    m_zoomSpinBox->setValue(14);
+    m_zoomSpinBox->setValue(10);
     mapFormLayout->addRow("缩放级别:", m_zoomSpinBox);
 
     mapLayout->addLayout(mapFormLayout);
@@ -415,10 +415,9 @@ void ControlPanel::onTargetInputChanged()
 void ControlPanel::onSetTargetClicked()
 {
     int id = getTargetId();
-    QVector3D position = getTargetPosition();
 
-    // 发出目标变化信号（包含编号和位置）
-    emit targetChanged(id, position);
+    // 发出目标变化信号（包含编号和原始极坐标，坐标转换在接收端完成）
+    emit targetChanged(id, getTargetDistance(), getTargetAzimuth(), getTargetHeight());
 
     // 如果目标当前不可见，自动显示
     if (!m_targetVisible) {
@@ -427,7 +426,10 @@ void ControlPanel::onSetTargetClicked()
         emit targetVisibilityChanged(true);
     }
 
-    qDebug() << "设置/更新目标 - 编号:" << id << "位置:" << position;
+    qDebug() << "设置/更新目标 - 编号:" << id
+             << "距离:" << getTargetDistance()
+             << "方位:" << getTargetAzimuth()
+             << "高度:" << getTargetHeight();
 }
 void ControlPanel::onClearTargetClicked()
 {

@@ -17,7 +17,7 @@ void CoordinateConverter::setSceneUnitsPerMeter(double s)
     }
     s_sceneUnitsPerMeter = s;
     // 高度方向按原比例关系等比放大（原来高度是水平的 DISBASE/HGTBASE = 10 倍夸大）
-    s_sceneUnitsPerMeterHeight = s * (static_cast<double>(DISBASE) / HGTBASE);
+    //s_sceneUnitsPerMeterHeight = s * (static_cast<double>(DISBASE) / HGTBASE);
     qDebug() << "CoordinateConverter: 新缩放比 sceneUnitsPerMeter =" << s
              << " sceneUnitsPerMeterHeight =" << s_sceneUnitsPerMeterHeight;
 }

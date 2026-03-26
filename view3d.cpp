@@ -83,7 +83,8 @@ View3D::View3D(QWidget *parent) :
     QWidget(parent),
     m_gridVisible(true),
     m_maxTargetId(0),
-    m_mapEntity(nullptr)
+    m_mapEntity(nullptr),
+    m_skyDome(nullptr)
 {
     setupUI();
     setupScene();
@@ -112,7 +113,7 @@ void View3D::setupUI()
     // 2. 配置 OpenGL 格式（保留你的配置）
     QSurfaceFormat format;
     format.setVersion(3, 3);
-    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setProfile(QSurfaceFormat::CompatibilityProfile);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setSamples(4);
@@ -134,16 +135,17 @@ void View3D::setupScene()
     // 设置Qt3D窗口的根实体
     m_view->setRootEntity(m_rootEntity);
 
+    // 背景色与天空穹顶地平线色保持一致，避免穹顶底部出现色差缝隙
     if (m_view->defaultFrameGraph()) {
         m_view->defaultFrameGraph()->setClearColor(QColor(25, 25, 35));
-    }
+        }
 
     // 相机设置...
     m_camera = m_view->camera();
     m_camera->setPosition(QVector3D(-2, 6, -15));
     m_camera->setViewCenter(QVector3D(0, 0, 0));
     m_camera->setUpVector(QVector3D(0, 1, 0));
-    m_camera->lens()->setPerspectiveProjection(60.0f, 16.0f/9.0f, 0.1f, 200.0f);
+    m_camera->lens()->setPerspectiveProjection(60.0f, 16.0f/9.0f, 0.1f, 500.0f);
 
     m_cameraController = new Qt3DExtras::QOrbitCameraController(m_rootEntity);
     m_cameraController->setCamera(m_camera);
@@ -157,6 +159,17 @@ void View3D::setupScene()
     // 光照设置
     setupLighting();
 
+    // 天空穹顶（半球体，半径 450，覆盖整个视图）
+    m_skyDome = new SkyDomeEntity(m_rootEntity);
+
+    // 让穹顶跟随相机 XZ 平移，防止相机移出穹顶范围（Y 轴固定在 0）
+    // connect(m_camera, &Qt3DRender::QCamera::positionChanged,
+    //         this, [this](const QVector3D &pos) {
+    //     if (m_skyDome) {
+    //         m_skyDome->setCenterPosition(QVector3D(pos.x(), 0.0f, pos.z()));
+    //     }
+    // });
+
     // 地图实体（不立即加载，等待用户输入经纬度）
     m_mapEntity = new MapEntity(m_rootEntity);
 
@@ -169,35 +182,36 @@ void View3D::createCoordinateSystem()
 {
     qDebug()<<__func__<<QThread::currentThread();
 
-    // X轴 - 红色（东方向）
-    QVector<QVector3D> xAxis = {QVector3D(-8, 0, 0), QVector3D(8, 0, 0)};
-    CustomLineEntity* xAxisLine = new CustomLineEntity(100, xAxis, QColor(255, 100, 100), 3.0f, m_rootEntity);
+    // 用 CoordinateConverter 换算真实距离到场景单位
+    // 默认 spm=1/1000，地图加载后更新为瓦片分辨率对应值
+    float spm       = static_cast<float>(CoordinateConverter::sceneUnitsPerMeter());
+    float axisLen   = 10000.0f * spm;  // XZ 轴半长：10km
+    float gridStep  = 1000.0f  * spm;  // 网格/圆环间距：1km
+    const int gridCount   = 10;        // ±10 条网格线（±10km）
+    const int circleCount = 10;        // 10 个圆环（1km~10km）
 
-    // Y轴 - 绿色（高度）
+    // X轴 - 红色（东西方向，±10km）
+    QVector<QVector3D> xAxis = {QVector3D(-axisLen, 0, 0), QVector3D(axisLen, 0, 0)};
+    CustomLineEntity* xAxisLine = new CustomLineEntity(100, xAxis, QColor(255, 100, 100), 3.0f, m_rootEntity);
+    m_axisEntities.append(xAxisLine);
+
+    // Y轴 - 绿色（高度方向，保留独立高度缩放，固定显示高度）
     QVector<QVector3D> yAxis = {QVector3D(0, 0, 0), QVector3D(0, 6, 0)};
     CustomLineEntity* yAxisLine = new CustomLineEntity(101, yAxis, QColor(100, 255, 100), 3.0f, m_rootEntity);
+    m_axisEntities.append(yAxisLine);
 
-    // Z轴 - 蓝色（北方向）
-    QVector<QVector3D> zAxis = {QVector3D(0, 0, -6), QVector3D(0, 0, 6)};
+    // Z轴 - 蓝色（南北方向，±10km）
+    QVector<QVector3D> zAxis = {QVector3D(0, 0, -axisLen), QVector3D(0, 0, axisLen)};
     CustomLineEntity* zAxisLine = new CustomLineEntity(102, zAxis, QColor(100, 100, 255), 3.0f, m_rootEntity);
+    m_axisEntities.append(zAxisLine);
 
-    // 创建网格平面 - RGB(50, 80, 50)
-    for (int i = -10; i <= 10; i++) {
+    // 创建网格平面（XZ平面，1km 间距，±10km 范围）
+    for (int i = -gridCount; i <= gridCount; i++) {
         if (i == 0) continue;
+        float pos = i * gridStep;
 
-        // XY平面网格
-//        QVector<QVector3D> gridLineX = {QVector3D(-5, i, 0), QVector3D(5, i, 0)};
-//        QVector<QVector3D> gridLineY = {QVector3D(i, -5, 0), QVector3D(i, 5, 0)};
-
-//        CustomLineEntity* gridX = new CustomLineEntity(200 + i, gridLineX, QColor(100, 180, 10), 0.5f, m_rootEntity);
-//        CustomLineEntity* gridY = new CustomLineEntity(210 + i, gridLineY, QColor(100, 180, 10), 0.5f, m_rootEntity);
-
-//        m_gridEntities.append(gridX);
-//        m_gridEntities.append(gridY);
-
-        // XZ平面网格
-        QVector<QVector3D> gridLineXZ1 = {QVector3D(-10, 0, i), QVector3D(10, 0, i)};
-        QVector<QVector3D> gridLineXZ2 = {QVector3D(i, 0, -10), QVector3D(i, 0, 10)};
+        QVector<QVector3D> gridLineXZ1 = {QVector3D(-axisLen, 0, pos), QVector3D(axisLen, 0, pos)};
+        QVector<QVector3D> gridLineXZ2 = {QVector3D(pos, 0, -axisLen), QVector3D(pos, 0, axisLen)};
 
         CustomLineEntity* gridXZ1 = new CustomLineEntity(220 + i, gridLineXZ1, QColor(100, 180, 10), 0.3f, m_rootEntity);
         CustomLineEntity* gridXZ2 = new CustomLineEntity(230 + i, gridLineXZ2, QColor(100, 180, 10), 0.3f, m_rootEntity);
@@ -206,26 +220,46 @@ void View3D::createCoordinateSystem()
         m_gridEntities.append(gridXZ2);
     }
 
-    //创建一个水平圆环（XZ平面）
-    // for(int i=0;i<10;i++){
-    //     QVector3D center1(0, 0, 0);  // 中心点
-    //     float radius1 = i;        // 半径
-    //     int segments1 = 120;          // 分段数
-    //     QVector3D normal1(0, 1, 0);  // 法向量向上
+    // 创建水平圆环（XZ平面，1km~10km，每圈间距 1km）
+    for (int i = 1; i <= circleCount; i++) {
+        float radius = i * gridStep;
+        QVector<QVector3D> circlePoints = generateCirclePoints(QVector3D(0, 0, 0), radius, 120, QVector3D(0, 1, 0));
 
-    //     QVector<QVector3D> circlePoints1 = generateCirclePoints(center1, radius1, segments1, normal1);
+        CustomLineEntity* horizontalCircle = new CustomLineEntity(
+            3000 + i,
+            circlePoints,
+            QColor(100, 180, 10),
+            1.0f,
+            m_rootEntity
+        );
+        m_circleEntities.append(horizontalCircle);
+    }
+}
 
-    //     // 创建水平圆环实体
-    //     CustomLineEntity* horizontalCircle = new CustomLineEntity(
-    //         3001,  // 唯一ID
-    //         circlePoints1,
-    //         QColor(100, 180, 10),  // 红色
-    //         1.0f,               // 线宽
-    //         m_rootEntity
-    //     );
-    // }
+void View3D::redrawCoordinateSystem()
+{
+    // 清理旧的坐标轴实体
+    for (CustomLineEntity* e : m_axisEntities) {
+        if (e) e->deleteLater();
+    }
+    m_axisEntities.clear();
 
+    // 清理旧的网格实体
+    for (CustomLineEntity* e : m_gridEntities) {
+        if (e) e->deleteLater();
+    }
+    m_gridEntities.clear();
 
+    // 清理旧的圆环实体
+    for (CustomLineEntity* e : m_circleEntities) {
+        if (e) e->deleteLater();
+    }
+    m_circleEntities.clear();
+
+    // 原尺寸重建
+    createCoordinateSystem();
+
+    qDebug() << "redrawCoordinateSystem: 坐标系已重绘";
 }
 
 void View3D::setupLighting()
@@ -373,13 +407,16 @@ void View3D::updateExistingTarget(int id, const QVector3D &position)
     emit targetUpdated(id, position);
 }
 
-void View3D::setTarget(int id, const QVector3D &position)
+void View3D::setTarget(int id, double distance, double azimuth, double height)
 {
     qDebug()<<__func__<<QThread::currentThread();
     if (id <= 0) {
         qWarning() << "无效的目标ID:" << id;
         return;
     }
+
+    QVector3D position = CoordinateConverter::distanceAzimuthHeightToCartesian(
+        distance, azimuth, height);
 
     if (m_targets.contains(id)) {
         updateExistingTarget(id, position);
@@ -496,10 +533,16 @@ void View3D::loadMap(double lat, double lon, int zoom)
         return;
     }
 
-    // 地图加载完成后更新 CoordinateConverter 缩放比
+    if (m_view->defaultFrameGraph()) {
+        m_view->defaultFrameGraph()->setClearColor(QColor(80, 145, 215));
+            }
+
+
+    // 地图加载完成后更新 CoordinateConverter 缩放比，并重绘坐标系
     connect(m_mapEntity, &MapEntity::mapLoaded, this, [this](double scale) {
         CoordinateConverter::setSceneUnitsPerMeter(scale);
         qDebug() << "View3D: 地图加载完成，CoordinateConverter 缩放比已更新为" << scale;
+        redrawCoordinateSystem();
     }, Qt::UniqueConnection);
 
     m_mapEntity->loadMap(lat, lon, zoom);

@@ -1,12 +1,16 @@
 #include "CustomLineEntity.h"
 #include <Qt3DRender/QObjectPicker>
 #include <Qt3DRender/QPickEvent>
+#include <Qt3DRender/QEffect>
+#include <Qt3DRender/QTechnique>
+#include <Qt3DRender/QRenderPass>
 
 CustomLineEntity::CustomLineEntity(Qt3DCore::QNode *parent)
     : Qt3DCore::QEntity(parent)
     , m_lineId(-1)
     , m_lineWidth(2.0f)
     , m_color(Qt::white)
+    , m_lineWidthState(nullptr)
 {
     initializeGeometry();
     initializeMaterial();
@@ -20,6 +24,7 @@ CustomLineEntity::CustomLineEntity(int id, const QVector<QVector3D> &points,
     , m_points(points)
     , m_color(color)
     , m_lineWidth(lineWidth)
+    , m_lineWidthState(nullptr)
 {
     initializeGeometry();
     initializeMaterial();
@@ -36,8 +41,8 @@ void CustomLineEntity::initializeGeometry()
     m_geometry = new Qt3DRender::QGeometry(this);
 
     // 创建缓冲区
-    m_vertexBuffer = new Qt3DRender::QBuffer(Qt3DRender::QBuffer::VertexBuffer, m_geometry);
-    m_indexBuffer = new Qt3DRender::QBuffer(Qt3DRender::QBuffer::IndexBuffer, m_geometry);
+    m_vertexBuffer = new Qt3DRender::QBuffer(m_geometry);
+    m_indexBuffer = new Qt3DRender::QBuffer(m_geometry);
 
 
     // 创建位置属性
@@ -58,6 +63,8 @@ void CustomLineEntity::initializeGeometry()
     m_geometry->addAttribute(m_indexAttribute);
 
     m_lineRenderer->setGeometry(m_geometry);
+
+
 
     // 创建变换组件
     m_transform = new Qt3DCore::QTransform();
@@ -82,6 +89,18 @@ void CustomLineEntity::initializeMaterial()
     m_material->setDiffuse(m_color);
     m_material->setAmbient(m_color.darker(150));
     m_material->setShininess(10.0f);
+
+    // 创建线宽渲染状态，并添加到所有渲染通道
+    m_lineWidthState = new Qt3DRender::QLineWidth();
+    m_lineWidthState->setValue(m_lineWidth);
+    m_lineWidthState->setSmooth(true);
+
+    for (auto *technique : m_material->effect()->techniques()) {
+        for (auto *renderPass : technique->renderPasses()) {
+            renderPass->addRenderState(m_lineWidthState);
+        }
+    }
+
     this->addComponent(m_material);
 }
 
@@ -132,8 +151,9 @@ void CustomLineEntity::setLineWidth(float width)
 {
     if (!qFuzzyCompare(m_lineWidth, width)) {
         m_lineWidth = width;
-        // 注意：在Qt3D中，线宽通常需要在渲染状态中设置
-        // 这里只是保存属性值，实际渲染可能需要额外配置
+        if (m_lineWidthState) {
+            m_lineWidthState->setValue(width);
+        }
         emit lineWidthChanged(width);
     }
 }

@@ -8,6 +8,7 @@
 #include <Qt3DRender/QAttribute>
 #include <Qt3DRender/QBuffer>
 #include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DRender/QLineWidth>
 #include <QVector3D>
 #include <QColor>
 #include <QMutex>
@@ -72,6 +73,7 @@ private:
     Qt3DRender::QAttribute *m_indexAttribute;
     Qt3DCore::QTransform *m_transform;
     Qt3DExtras::QPhongMaterial *m_material;
+    Qt3DRender::QLineWidth *m_lineWidthState;
 };
 
 #endif // CUSTOMLINEENTITY_H

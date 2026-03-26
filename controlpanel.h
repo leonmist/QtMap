@@ -29,7 +29,7 @@ public:
 signals:
     void resetCameraRequested();
     void toggleGridRequested();
-    void targetChanged(int id, const QVector3D &position);  // 发送编号和位置
+    void targetChanged(int id, double distance, double azimuth, double height);  // 发送编号和原始极坐标
     void targetVisibilityChanged(bool visible);              // 所有目标可见性
     void loadMapRequested(double lat, double lon, int zoom); // 请求加载地图
 

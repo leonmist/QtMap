@@ -64,7 +64,7 @@ MapEntity::MapEntity(Qt3DCore::QEntity *parent)
     , m_centerLat(0)
     , m_centerLon(0)
     , m_zoom(14)
-    , m_tileRadius(3)        // 7×7 瓦片
+    , m_tileRadius(10)        // 7×7 瓦片
     , m_totalTiles(0)
     , m_pendingTiles(0)
     , m_sceneUnitsPerMeter(1.0 / DISBASE)
@@ -140,7 +140,7 @@ void MapEntity::requestTile(int tx, int ty, int col, int row)
     // style=7: 路网地图；style=6: 卫星图；style=8: 路网（高德二版）
     QString urlStr = QString(
         "http://wprd04.is.autonavi.com/appmaptile"
-        "?style=7&lang=zh_cn&size=1&scl=1&x=%1&y=%2&z=%3"
+        "?style=6&lang=zh_cn&size=1&scl=1&x=%1&y=%2&z=%3"
     ).arg(tx).arg(ty).arg(m_zoom);
 
     qDebug() << "MapEntity: 下载瓦片 col=" << col << " row=" << row
@@ -250,9 +250,9 @@ void MapEntity::assembleAndApply()
                 painter.drawImage(col * 256 + dx_shift, row * 256 + dy_shift, m_tileImages[key]);
             }
             // 每张瓦片叠加红色边框便于辨识
-            painter.setPen(QPen(Qt::red, 2));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawRect(col * 256 + dx_shift, row * 256 + dy_shift, 255, 255);
+            // painter.setPen(QPen(Qt::red, 2));
+            // painter.setBrush(Qt::NoBrush);
+            // painter.drawRect(col * 256 + dx_shift, row * 256 + dy_shift, 255, 255);
         }
     }
     painter.end();
@@ -261,7 +261,7 @@ void MapEntity::assembleAndApply()
     double mpp      = metersPerPixelAt(m_zoom, m_centerLat);  // 米/像素 @当前纬度
     double realWidth = totalPix * mpp;                         // 真实宽度（米）
     // 地图平面在场景中占 20 个场景单元（-10 ~ +10）
-    const double sceneSize = 20.0;
+    const double sceneSize = 200.0;
     m_sceneUnitsPerMeter   = sceneSize / realWidth;
 
     qDebug() << "MapEntity: 拼图完成"

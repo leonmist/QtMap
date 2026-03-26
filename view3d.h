@@ -13,6 +13,8 @@
 #include "CustomLineEntity.h"
 #include "TargetEntity.h"
 #include "MapEntity.h"
+#include "SkyDomeEntity.h"
+#include "CoordinateConverter.h"
 
 // 目标数据，包含目标实体和轨迹线
 struct TargetData {
@@ -45,7 +47,7 @@ public:
 
 public slots:
     void toggleGrid();
-    void setTarget(int id, const QVector3D &position);
+    void setTarget(int id, double distance, double azimuth, double height);
     void setTargetVisible(int id, bool visible);
     void setAllTargetsVisible(bool visible);
     void loadMap(double lat, double lon, int zoom = 14);
@@ -59,6 +61,7 @@ private:
     void setupScene();
     void setupLighting();
     void createCoordinateSystem();
+    void redrawCoordinateSystem();
     void updateCameraInfo();
 
     // 目标管理
@@ -76,7 +79,9 @@ private:
     Qt3DRender::QCamera *m_camera;
     Qt3DExtras::QOrbitCameraController *m_cameraController;
 
-    QList<CustomLineEntity*> m_gridEntities;
+    QList<CustomLineEntity*> m_axisEntities;   // 坐标轴（X/Y/Z）
+    QList<CustomLineEntity*> m_gridEntities;   // XZ 网格线
+    QList<CustomLineEntity*> m_circleEntities; // 水平圆环
     bool m_gridVisible;
 
     CustomLineEntity* testLine;
@@ -86,7 +91,8 @@ private:
     QMap<int, TargetData> m_targets;  // 按ID存储目标数据
     int m_maxTargetId;                // 最大目标ID（用于颜色分配）
 
-    MapEntity *m_mapEntity;           // 地图瓦片实体
+    MapEntity    *m_mapEntity;        // 地图瓦片实体
+    SkyDomeEntity *m_skyDome;         // 天空穹顶实体
 
     void refreshRootEntity(); // 强制刷新根实体渲染上下文
     Qt3DRender::QRenderAspect* getRenderAspect(); // 获取渲染切面
