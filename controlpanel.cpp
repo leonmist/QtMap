@@ -168,7 +168,7 @@ void ControlPanel::setupUI()
     mainLayout->addWidget(simulationGroup);
 
     // ==== 地图加载 ====
-    QGroupBox *mapGroup = new QGroupBox("高德地图加载");
+    QGroupBox *mapGroup = new QGroupBox("高德地图加载[GCJ02]");
     QVBoxLayout *mapLayout = new QVBoxLayout();
 
     QFormLayout *mapFormLayout = new QFormLayout();

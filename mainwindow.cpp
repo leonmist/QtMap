@@ -46,6 +46,7 @@ void MainWindow::setupUI()
     // 连接地图加载信号
     connect(m_controlPanel, &ControlPanel::loadMapRequested,
             this, &MainWindow::handleLoadMap);
+
     if (m_view3D->mapEntity()) {
         connect(m_view3D->mapEntity(), &MapEntity::loadProgress,
                 m_controlPanel, &ControlPanel::setMapLoadProgress,

@@ -114,8 +114,9 @@ void TargetEntity::createTarget()
     textMaterial->setAmbient(QColor(100, 100, 100));
 
     Qt3DCore::QTransform *textTransform = new Qt3DCore::QTransform();
-    textTransform->setTranslation(QVector3D(-0.22f, 0.5f, 0.1f));
-    textTransform->setScale(0.09f);
+    textTransform->setTranslation(QVector3D(0.22f, 0.5f, 0.1f));
+    textTransform->setScale(2.0f);
+    textTransform->setRotation(QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 180.0f));
 
     m_textEntity->addComponent(m_textMesh);
     m_textEntity->addComponent(textMaterial);
