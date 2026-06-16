@@ -142,7 +142,8 @@ void View3D::setupScene()
 
     // 相机设置...
     m_camera = m_view->camera();
-    m_camera->setPosition(QVector3D(-2, 6, -15));
+    // 初始从 180 度方向（南，+Z 侧）朝原点看，而非 0 度（北，-Z 侧）
+    m_camera->setPosition(QVector3D(2, 6, 15));
     m_camera->setViewCenter(QVector3D(0, 0, 0));
     m_camera->setUpVector(QVector3D(0, 1, 0));
     m_camera->lens()->setPerspectiveProjection(60.0f, 16.0f/9.0f, 0.1f, 500.0f);
@@ -470,8 +471,10 @@ QString View3D::getCameraInfo() const
 void View3D::resetCamera()
 {
     if (m_camera) {
-        m_camera->setPosition(QVector3D(12, 8, 10));
+        // 与初始视角一致：从 180 度方向（南，+Z 侧）朝原点看
+        m_camera->setPosition(QVector3D(2, 6, 15));
         m_camera->setViewCenter(QVector3D(0, 0, 0));
+        m_camera->setUpVector(QVector3D(0, 1, 0));
         updateCameraInfo();
     }
 }

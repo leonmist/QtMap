@@ -43,7 +43,7 @@ void ControlPanel::setupUI()
     QGroupBox *infoGroup = new QGroupBox("坐标系信息");
     QVBoxLayout *infoLayout = new QVBoxLayout();
 
-    m_infoLabel = new QLabel("三维坐标系 \nX轴: 东方向 (红色)\nY轴: 高度 (绿色)\nZ轴: 北方向 (蓝色)");
+    m_infoLabel = new QLabel("三维坐标系 \nX轴: 东方向 (红色)\nY轴: 高度 (绿色)\nZ轴: 南北方向 (蓝色, -Z为北)");
     m_infoLabel->setWordWrap(true);
     m_infoLabel->setAlignment(Qt::AlignLeft);
     infoLayout->addWidget(m_infoLabel);

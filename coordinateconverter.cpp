@@ -27,6 +27,11 @@ double CoordinateConverter::sceneUnitsPerMeter()
     return s_sceneUnitsPerMeter;
 }
 
+double CoordinateConverter::sceneUnitsPerMeterHeight()
+{
+    return s_sceneUnitsPerMeterHeight;
+}
+
 QVector3D CoordinateConverter::distanceAzimuthHeightToCartesian(double distance, double azimuth, double height)
 {
     // 计算水平距离
@@ -35,9 +40,10 @@ QVector3D CoordinateConverter::distanceAzimuthHeightToCartesian(double distance,
     // 将方位角转换为弧度
     double azimuthRad = degreesToRadians(azimuth);
 
-    // 在XZ平面上计算位置（X指向东，Z指向北）
-    double x = -horizontalDistance * sin(azimuthRad);  // 东方向
-    double z = horizontalDistance * cos(azimuthRad);  // 北方向
+    // 在XZ平面上计算位置，朝向与三维地形地图保持一致：+X 指向东，-Z 指向北
+    // （地形网格中 sceneZ 越小纬度越高，即 -Z 为北；东为 +X）
+    double x = horizontalDistance * sin(azimuthRad);   // 东方向(+X)
+    double z = -horizontalDistance * cos(azimuthRad);  // 北方向(-Z)
     double y = height;                                  // 高度（Y轴向上）
 
     // 应用动态缩放（地图加载前使用 1/DISBASE，加载后使用瓦片像素分辨率推导的比例）
@@ -62,9 +68,10 @@ void CoordinateConverter::cartesianToDistanceAzimuthHeight(const QVector3D &poin
     distance = sqrt(realX * realX + realZ * realZ + realY * realY);
 
     // 计算方位角（0-360度）- 使用实际坐标
-    // 注意：atan2(y, x)中的y是东方向，x是北方向，所以参数是(realX, realZ)
+    // 与正向一致：x = h*sin(az)（东=+X），z = -h*cos(az)（北=-Z）
+    // 故 az = atan2(realX, -realZ)
     if (realZ != 0.0 || realX != 0.0) {
-        azimuth = radiansToDegrees(atan2(-realZ, -realX));
+        azimuth = radiansToDegrees(atan2(realX, -realZ));
     } else {
         azimuth = 0.0;
     }
@@ -171,4 +178,29 @@ void CoordinateConverter::wgs84ToGcj02(double wgsLat, double wgsLon,
 
     gcjLat = wgsLat + dLat;
     gcjLon = wgsLon + dLon;
+}
+
+void CoordinateConverter::gcj02ToWgs84(double gcjLat, double gcjLon,
+                                       double &wgsLat, double &wgsLon)
+{
+    // 中国范围外不做偏移
+    if (isOutOfChina(gcjLat, gcjLon)) {
+        wgsLat = gcjLat;
+        wgsLon = gcjLon;
+        return;
+    }
+
+    // GCJ02 加密没有解析逆变换，使用迭代逼近：
+    // 不断用当前估计的 WGS84 正向加密，再用残差修正，几次即可收敛到亚米级。
+    double curLat = gcjLat;
+    double curLon = gcjLon;
+    for (int i = 0; i < 3; ++i) {
+        double testGcjLat = 0.0, testGcjLon = 0.0;
+        wgs84ToGcj02(curLat, curLon, testGcjLat, testGcjLon);
+        curLat += gcjLat - testGcjLat;
+        curLon += gcjLon - testGcjLon;
+    }
+
+    wgsLat = curLat;
+    wgsLon = curLon;
 }

@@ -16,6 +16,9 @@
 #include <QMap>
 #include <QPair>
 #include <QDir>
+#include "tiffreader.h"
+#include "terraingeometry.h"
+#include <Qt3DRender/QGeometryRenderer>
 
 // ─── 内存纹理图像（持有 QImage，不需要临时文件）────────────────────────────────
 
@@ -27,10 +30,10 @@ public:
         Qt3DRender::QTextureImageDataPtr operator()() override
         {
             auto data = Qt3DRender::QTextureImageDataPtr::create();
-            // OpenGL 纹理 Y=0 在底部，需垂直翻转；
-            // QPlaneMesh U 轴与瓦片列方向相反，需水平翻转
+            // OpenGL 纹理 Y=0 在底部，需垂直翻转(vertical=true)；
+            // 水平方向不翻转(horizontal=false)，左右方向由网格自身的 U 纹理坐标决定。
             QImage converted = m_image.convertToFormat(QImage::Format_RGBA8888)
-                                      .mirrored(true, true);
+                                      .mirrored(false, true);
             data->setImage(converted);
             return data;
         }
@@ -87,6 +90,10 @@ public:
     // 供外部使用：sceneX = eastMeters  * sceneUnitsPerMeter
     //             sceneZ = northMeters * sceneUnitsPerMeter
 
+    // Web Mercator 工具
+    static QPointF latLonToTileF(double lat, double lon, int zoom);
+    static QPair<int,int> latLonToTileXY(double lat, double lon, int zoom);
+
 signals:
     void mapLoaded(double sceneUnitsPerMeter);
     void loadProgress(int done, int total);
@@ -96,10 +103,6 @@ private slots:
     void onReplyFinished(QNetworkReply *reply);
 
 private:
-    // Web Mercator 工具
-    static QPointF latLonToTileF(double lat, double lon, int zoom);
-    static QPair<int,int> latLonToTileXY(double lat, double lon, int zoom);
-
     // 地面分辨率表（赤道处，米/像素），来自用户实测数据
     static double equatorResolution(int zoom);
 
@@ -133,6 +136,12 @@ private:
     Qt3DRender::QMaterial     *m_material;
     Qt3DCore::QTransform      *m_transform;
     InMemoryTextureImage      *m_texImage;    // 可重复 updateImage()
+
+    // ── 3D 高程地形 ──
+    TiffReader                m_tiffReader;
+    Qt3DRender::QGeometryRenderer *m_terrainRenderer;
+    TerrainGeometry           *m_terrainGeometry;
+    bool                      m_hasTerrain;
 };
 
 #endif // MAPENTITY_H

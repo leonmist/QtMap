@@ -53,7 +53,7 @@ void MainWindow::setupUI()
                 Qt::QueuedConnection);
     }
     // 初始信息
-    m_controlPanel->setInfo("X轴: 东方向 (红色)\nY轴: 高度 (绿色)\nZ轴: 北方向 (蓝色)");
+    m_controlPanel->setInfo("X轴: 东方向 (红色)\nY轴: 高度 (绿色)\nZ轴: 南北方向 (蓝色, -Z为北)");
 
     // 初始更新相机信息
     updateCameraInfo(m_view3D->getCameraInfo());

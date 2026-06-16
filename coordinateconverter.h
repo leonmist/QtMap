@@ -20,6 +20,9 @@ public:
     static void   setSceneUnitsPerMeter(double s);
     static double sceneUnitsPerMeter();
 
+    // 垂直方向缩放比（场景单元/米），高度通常需要相对水平方向夸大显示
+    static double sceneUnitsPerMeterHeight();
+
     // 从距离、方位角、高度转换为三维坐标（相对于观察者）
     // 距离：斜距，单位米
     // 方位角：0-360度，正北为0度，顺时针增加
@@ -51,6 +54,11 @@ public:
     // 输入输出均为十进制度，纬度为正北、经度为正东
     static void wgs84ToGcj02(double wgsLat, double wgsLon,
                              double &gcjLat, double &gcjLon);
+
+    // GCJ02（高德加密坐标）转 WGS84（GPS原始坐标）
+    // 采用迭代逼近反解（GCJ02 加密无解析逆），精度可达亚米级
+    static void gcj02ToWgs84(double gcjLat, double gcjLon,
+                             double &wgsLat, double &wgsLon);
 
 private:
     // 判断坐标是否在中国范围外（范围外不做加密偏移）

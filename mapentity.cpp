@@ -73,6 +73,9 @@ MapEntity::MapEntity(Qt3DCore::QEntity *parent)
     , m_material(nullptr)
     , m_transform(nullptr)
     , m_texImage(nullptr)
+    , m_terrainRenderer(nullptr)
+    , m_terrainGeometry(nullptr)
+    , m_hasTerrain(false)
 {
     connect(m_nam, &QNetworkAccessManager::finished,
             this, &MapEntity::onReplyFinished);
@@ -88,6 +91,26 @@ void MapEntity::loadMap(double centerLat, double centerLon, int zoom)
     m_centerLon  = centerLon;
     m_zoom       = zoom;
     m_tileImages.clear();
+
+    // 尝试加载 3D 高程 TIFF 地图
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString tifPath = appDir + "/tif/test1.tif";
+    QString tfwPath = appDir + "/tif/test1.tfw";
+    if (!QFile::exists(tifPath)) {
+        tifPath = "tif/test1.tif";
+        tfwPath = "tif/test1.tfw";
+    }
+    if (!QFile::exists(tifPath)) {
+        tifPath = "../tif/test1.tif";
+        tfwPath = "../tif/test1.tfw";
+    }
+
+    m_hasTerrain = m_tiffReader.load(tifPath, tfwPath);
+    if (m_hasTerrain) {
+        qDebug() << "MapEntity: 成功加载 3D 高程地图，将渲染三维起伏卫星地图！";
+    } else {
+        qDebug() << "MapEntity: 未能加载高程地图，将降级渲染二维平面卫星地图。";
+    }
 
     int side      = 2 * m_tileRadius + 1;   // 7
     m_totalTiles  = side * side;             // 49
@@ -278,15 +301,10 @@ void MapEntity::assembleAndApply()
 
 void MapEntity::buildOrUpdatePlane(const QImage &mosaic, double sceneW, double sceneH)
 {
-    if (!m_planeMesh) {
-        // 首次：创建所有 Qt3D 组件
-        m_planeMesh = new Qt3DExtras::QPlaneMesh(this);
-        m_planeMesh->setWidth(static_cast<float>(sceneW));
-        m_planeMesh->setHeight(static_cast<float>(sceneH));
-        m_planeMesh->setMeshResolution(QSize(2, 2));
-
-        // 创建纹理
-        Qt3DRender::QTexture2D *texture = new Qt3DRender::QTexture2D(this);
+    // 1. 创建或更新纹理
+    Qt3DRender::QTexture2D *texture = nullptr;
+    if (!m_material) {
+        texture = new Qt3DRender::QTexture2D(this);
         texture->setMinificationFilter(Qt3DRender::QTexture2D::Linear);
         texture->setMagnificationFilter(Qt3DRender::QTexture2D::Linear);
         texture->setWrapMode(Qt3DRender::QTextureWrapMode(Qt3DRender::QTextureWrapMode::ClampToEdge));
@@ -296,28 +314,69 @@ void MapEntity::buildOrUpdatePlane(const QImage &mosaic, double sceneW, double s
         m_texImage = new InMemoryTextureImage(mosaic, this);
         texture->addTextureImage(m_texImage);
 
-        // 使用 QTextureMaterial（仅漫射纹理，不受光照影响，地图颜色保真）
         Qt3DExtras::QTextureMaterial *mat = new Qt3DExtras::QTextureMaterial(this);
         mat->setTexture(texture);
         mat->setAlphaBlendingEnabled(false);
         m_material = mat;
 
-        // 变换：地图放在 y = -0.01 轻微下移，避免与 y=0 的网格 z-fighting
         m_transform = new Qt3DCore::QTransform(this);
         m_transform->setTranslation(QVector3D(0.0f, -0.01f, 0.0f));
 
-        addComponent(m_planeMesh);
         addComponent(m_material);
         addComponent(m_transform);
-
-        qDebug() << "MapEntity: Qt3D 地图平面已创建，尺寸=" << sceneW << "×" << sceneH;
     } else {
-        // 后续重新加载：只更新尺寸和纹理
-        m_planeMesh->setWidth(static_cast<float>(sceneW));
-        m_planeMesh->setHeight(static_cast<float>(sceneH));
         if (m_texImage) {
             m_texImage->updateImage(mosaic);
         }
-        qDebug() << "MapEntity: Qt3D 地图纹理已更新";
+    }
+
+    // 2. 根据是否有高程数据，创建/更新 3D 地形网格或 2D 平面网格
+    if (m_hasTerrain) {
+        // 如果之前创建了平面网格，先移除它
+        if (m_planeMesh) {
+            removeComponent(m_planeMesh);
+            m_planeMesh->deleteLater();
+            m_planeMesh = nullptr;
+        }
+
+        if (!m_terrainRenderer) {
+            m_terrainRenderer = new Qt3DRender::QGeometryRenderer(this);
+            m_terrainGeometry = new TerrainGeometry(m_terrainRenderer);
+            m_terrainRenderer->setGeometry(m_terrainGeometry);
+            m_terrainRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
+            
+            addComponent(m_terrainRenderer);
+        }
+
+        // 动态生成 3D 地形网格
+        // 注意：高度方向必须使用垂直缩放比（与目标摆放保持一致），而非水平缩放比，
+        // 否则在大范围 zoom 下高程相对水平尺度过小，雪山等高山会被压扁成平地。
+        double heightScaleUnits = CoordinateConverter::sceneUnitsPerMeterHeight();
+        m_terrainGeometry->generate(m_tiffReader, m_centerLat, m_centerLon, heightScaleUnits, m_zoom, 0.3f);
+        m_terrainRenderer->setVertexCount(m_terrainGeometry->indexCount());
+
+        qDebug() << "MapEntity: 3D 地形网格已更新，顶点数:" << m_terrainGeometry->vertexCount();
+    } else {
+        // 如果之前创建了地形网格，先移除它
+        if (m_terrainRenderer) {
+            removeComponent(m_terrainRenderer);
+            m_terrainRenderer->deleteLater();
+            m_terrainRenderer = nullptr;
+            m_terrainGeometry = nullptr;
+        }
+
+        if (!m_planeMesh) {
+            m_planeMesh = new Qt3DExtras::QPlaneMesh(this);
+            m_planeMesh->setWidth(static_cast<float>(sceneW));
+            m_planeMesh->setHeight(static_cast<float>(sceneH));
+            m_planeMesh->setMeshResolution(QSize(2, 2));
+            
+            addComponent(m_planeMesh);
+        } else {
+            m_planeMesh->setWidth(static_cast<float>(sceneW));
+            m_planeMesh->setHeight(static_cast<float>(sceneH));
+        }
+
+        qDebug() << "MapEntity: 2D 平面网格已更新";
     }
 }

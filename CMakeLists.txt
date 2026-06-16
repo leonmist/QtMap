@@ -32,6 +32,8 @@ add_executable(${PROJECT_NAME}
   skydomeentity.cpp
   targetentity.cpp
   view3d.cpp
+  tiffreader.cpp
+  terraingeometry.cpp
 
   controlpanel.h
   coordinateconverter.h
@@ -41,6 +43,8 @@ add_executable(${PROJECT_NAME}
   skydomeentity.h
   targetentity.h
   view3d.h
+  tiffreader.h
+  terraingeometry.h
 
   mainwindow.ui
 )
