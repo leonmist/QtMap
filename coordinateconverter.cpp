@@ -118,3 +118,57 @@ double CoordinateConverter::calculateDistance(const QVector3D &p1, const QVector
     double dz = p2.z() - p1.z();
     return sqrt(dx * dx + dy * dy + dz * dz);
 }
+
+bool CoordinateConverter::isOutOfChina(double lat, double lon)
+{
+    return !(lon > 73.66 && lon < 135.05 && lat > 3.86 && lat < 53.55);
+}
+
+double CoordinateConverter::transformLatOffset(double x, double y)
+{
+    double ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y
+                 + 0.1 * x * y + 0.2 * sqrt(fabs(x));
+    ret += (20.0 * sin(6.0 * x * M_PI) + 20.0 * sin(2.0 * x * M_PI)) * 2.0 / 3.0;
+    ret += (20.0 * sin(y * M_PI) + 40.0 * sin(y / 3.0 * M_PI)) * 2.0 / 3.0;
+    ret += (160.0 * sin(y / 12.0 * M_PI) + 320.0 * sin(y * M_PI / 30.0)) * 2.0 / 3.0;
+    return ret;
+}
+
+double CoordinateConverter::transformLonOffset(double x, double y)
+{
+    double ret = 300.0 + x + 2.0 * y + 0.1 * x * x
+                 + 0.1 * x * y + 0.1 * sqrt(fabs(x));
+    ret += (20.0 * sin(6.0 * x * M_PI) + 20.0 * sin(2.0 * x * M_PI)) * 2.0 / 3.0;
+    ret += (20.0 * sin(x * M_PI) + 40.0 * sin(x / 3.0 * M_PI)) * 2.0 / 3.0;
+    ret += (150.0 * sin(x / 12.0 * M_PI) + 300.0 * sin(x / 30.0 * M_PI)) * 2.0 / 3.0;
+    return ret;
+}
+
+void CoordinateConverter::wgs84ToGcj02(double wgsLat, double wgsLon,
+                                       double &gcjLat, double &gcjLon)
+{
+    // 中国范围外（含港澳台习惯上不偏移）直接返回原始坐标
+    if (isOutOfChina(wgsLat, wgsLon)) {
+        gcjLat = wgsLat;
+        gcjLon = wgsLon;
+        return;
+    }
+
+    // 克拉索夫斯基椭球参数
+    const double a  = 6378245.0;              // 长半轴
+    const double ee = 0.00669342162296594323; // 第一偏心率平方
+
+    double dLat = transformLatOffset(wgsLon - 105.0, wgsLat - 35.0);
+    double dLon = transformLonOffset(wgsLon - 105.0, wgsLat - 35.0);
+
+    double radLat = wgsLat / 180.0 * M_PI;
+    double magic = sin(radLat);
+    magic = 1 - ee * magic * magic;
+    double sqrtMagic = sqrt(magic);
+
+    dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * M_PI);
+    dLon = (dLon * 180.0) / (a / sqrtMagic * cos(radLat) * M_PI);
+
+    gcjLat = wgsLat + dLat;
+    gcjLon = wgsLon + dLon;
+}

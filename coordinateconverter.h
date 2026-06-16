@@ -47,7 +47,18 @@ public:
     // 计算两点之间的距离
     static double calculateDistance(const QVector3D &p1, const QVector3D &p2);
 
+    // WGS84（GPS原始坐标）转 GCJ02（高德/国测局加密坐标）
+    // 输入输出均为十进制度，纬度为正北、经度为正东
+    static void wgs84ToGcj02(double wgsLat, double wgsLon,
+                             double &gcjLat, double &gcjLon);
+
 private:
+    // 判断坐标是否在中国范围外（范围外不做加密偏移）
+    static bool isOutOfChina(double lat, double lon);
+    // GCJ02 加密偏移的内部辅助计算
+    static double transformLatOffset(double x, double y);
+    static double transformLonOffset(double x, double y);
+
     // 默认值 = 1/DISBASE = 0.001，加载地图后被覆盖
     static double s_sceneUnitsPerMeter;
     // 高度方向保持独立比例（高度通常需要夸大显示）

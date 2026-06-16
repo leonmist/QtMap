@@ -168,26 +168,26 @@ void ControlPanel::setupUI()
     mainLayout->addWidget(simulationGroup);
 
     // ==== 地图加载 ====
-    QGroupBox *mapGroup = new QGroupBox("高德地图加载[GCJ02]");
+    QGroupBox *mapGroup = new QGroupBox("高德地图加载");
     QVBoxLayout *mapLayout = new QVBoxLayout();
 
     QFormLayout *mapFormLayout = new QFormLayout();
 
     m_latSpinBox = new QDoubleSpinBox();
     m_latSpinBox->setRange(-90.0, 90.0);
-    m_latSpinBox->setValue(31.2304);   // 默认上海
-    m_latSpinBox->setDecimals(6);
-    m_latSpinBox->setSingleStep(0.01);
+    m_latSpinBox->setDecimals(6);          // 必须在 setValue 之前，否则值会被按默认2位精度四舍五入
+    m_latSpinBox->setSingleStep(0.0001);
+    m_latSpinBox->setValue(31.494280);   
     m_latSpinBox->setSuffix(" °N");
-    mapFormLayout->addRow("中心纬度:", m_latSpinBox);
+    mapFormLayout->addRow("中心纬度[WGS84]:", m_latSpinBox);
 
     m_lonSpinBox = new QDoubleSpinBox();
     m_lonSpinBox->setRange(-180.0, 180.0);
-    m_lonSpinBox->setValue(121.4737);  // 默认上海
-    m_lonSpinBox->setDecimals(6);
-    m_lonSpinBox->setSingleStep(0.01);
+    m_lonSpinBox->setDecimals(6);          // 必须在 setValue 之前，否则值会被按默认2位精度四舍五入
+    m_lonSpinBox->setSingleStep(0.0001);
+    m_lonSpinBox->setValue(104.674595); 
     m_lonSpinBox->setSuffix(" °E");
-    mapFormLayout->addRow("中心经度:", m_lonSpinBox);
+    mapFormLayout->addRow("中心经度[WGS84]:", m_lonSpinBox);
 
     m_zoomSpinBox = new QSpinBox();
     m_zoomSpinBox->setRange(8, 18);
@@ -451,18 +451,25 @@ void ControlPanel::onClearTargetClicked()
 
 void ControlPanel::onLoadMapClicked()
 {
-    double lat  = m_latSpinBox->value();
-    double lon  = m_lonSpinBox->value();
-    int    zoom = m_zoomSpinBox->value();
+    // 界面输入为 WGS84（GPS原始坐标）
+    double wgsLat = m_latSpinBox->value();
+    double wgsLon = m_lonSpinBox->value();
+    int    zoom   = m_zoomSpinBox->value();
+
+    // 高德地图为 GCJ02 坐标系，加载前需将 WGS84 转换为 GCJ02
+    double gcjLat = wgsLat;
+    double gcjLon = wgsLon;
+    CoordinateConverter::wgs84ToGcj02(wgsLat, wgsLon, gcjLat, gcjLon);
 
     m_loadMapBtn->setEnabled(false);
     m_mapProgressLabel->setText("加载中 0/49...");
     m_mapProgressLabel->setStyleSheet("QLabel { color: orange; }");
 
-    qDebug() << "ControlPanel: 请求加载地图 lat=" << lat
-             << " lon=" << lon << " zoom=" << zoom;
+    qDebug() << "ControlPanel: 请求加载地图 WGS84(lat=" << wgsLat
+             << ", lon=" << wgsLon << ") -> GCJ02(lat=" << gcjLat
+             << ", lon=" << gcjLon << ") zoom=" << zoom;
 
-    emit loadMapRequested(lat, lon, zoom);
+    emit loadMapRequested(gcjLat, gcjLon, zoom);
 }
 
 void ControlPanel::setMapLoadProgress(int done, int total)
